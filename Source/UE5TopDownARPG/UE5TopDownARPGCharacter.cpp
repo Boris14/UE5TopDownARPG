@@ -8,11 +8,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Components/SphereComponent.h"
 #include "Materials/Material.h"
 #include "Engine/World.h"
 #include "Abilities/BaseAbility.h"
 #include "UE5TopDownARPGGameMode.h"
 #include "UE5TopDownARPG.h"
+#include "GameFramework/PhysicsVolume.h"
 #include "Net/UnrealNetwork.h"
 
 AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
@@ -31,6 +33,11 @@ AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
+	ClimbingSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ClimbingSphereComponent"));
+	ClimbingSphereComponent->SetupAttachment(RootComponent);
+	ClimbingSphereComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Overlap);
+	ClimbingSphereComponent->SetGenerateOverlapEvents(true);
+
 	// Create a camera boom...
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -47,14 +54,18 @@ AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-
-	OnTakeAnyDamage.AddDynamic(this, &AUE5TopDownARPGCharacter::TakeAnyDamage);
 }
 
 void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	OnTakeAnyDamage.AddDynamic(this, &AUE5TopDownARPGCharacter::TakeAnyDamage);
+
+	FScriptDelegate OnClimbingComponentBeginOverlapDelegate;
+	OnClimbingComponentBeginOverlapDelegate.BindUFunction(this, "OnClimbingComponentBeginOverlap");
+	ClimbingSphereComponent->OnComponentBeginOverlap.AddUnique(OnClimbingComponentBeginOverlapDelegate);
+
 	if (AbilityTemplate != nullptr)
 	{
 		AbilityInstance = NewObject<UBaseAbility>(this, AbilityTemplate);
@@ -110,12 +121,52 @@ void AUE5TopDownARPGCharacter::TakeAnyDamage(AActor* DamagedActor, float Damage,
 	}
 }
 
+void AUE5TopDownARPGCharacter::OnClimbingComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (IsValid(OtherActor) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::OnClimbingComponentBeginOverlap IsValid(OtherActor) == false"));
+		return;
+	}
+
+	if (OtherActor->ActorHasTag(ClimbingHoldsActorTag) && IsJumpProvidingForce())
+	{
+		UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Grabbed"));
+		GrabHold(OtherActor, OtherActor->GetActorLocation());
+	}
+}
+
 void AUE5TopDownARPGCharacter::OnRep_SetHealth(float OldHealth)
 {
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Health %f"), Health));
 	}
+}
+
+void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLocation)
+{
+	if (IsValid(Hold) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::GrabHold IsValid(Hold) == false"));
+		return;
+	}
+
+	for (UActorComponent* Component : GetComponents())
+	{
+		UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+		if (IsValid(PrimitiveComponent))
+		{
+			PrimitiveComponent->SetEnableGravity(false);
+		}
+	}
+	
+	const FVector& ActorLocation = GetActorLocation();
+	FVector Direction = OverlapLocation - ActorLocation;
+	float MovementScale = Direction.Size();
+	Direction.Normalize();
+	AddMovementInput(Direction);
 }
 
 void AUE5TopDownARPGCharacter::Death()

@@ -6,6 +6,12 @@
 #include "GameFramework/Character.h"
 #include "UE5TopDownARPGCharacter.generated.h"
 
+class USphereComponent;
+class UCameraComponent;
+class USpringArmComponent;
+class UBehaviorTree;
+class UBaseAbility;
+
 UCLASS(Blueprintable)
 class AUE5TopDownARPGCharacter : public ACharacter
 {
@@ -34,26 +40,33 @@ public:
 private:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* TopDownCameraComponent;
+	UCameraComponent* TopDownCameraComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	USphereComponent* ClimbingSphereComponent;
 
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+	USpringArmComponent* CameraBoom;
 
 	UPROPERTY(EditDefaultsOnly)
-	class UBehaviorTree* BehaviorTree;
+	UBehaviorTree* BehaviorTree;
 
 	UPROPERTY()
-	class UBaseAbility* AbilityInstance;
+	UBaseAbility* AbilityInstance;
 
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<class UBaseAbility> AbilityTemplate;
+	TSubclassOf<UBaseAbility> AbilityTemplate;
 
 	UPROPERTY(ReplicatedUsing = OnRep_SetHealth, EditDefaultsOnly)
 	float Health = 100.0f;
 
 	UPROPERTY(EditDefaultsOnly)
 	float DeathDelay = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	/* A Tag used to check which Actors are Climbing Holds */
+	FName ClimbingHoldsActorTag;
 
 	FTimerHandle DeathHandle;
 
@@ -64,7 +77,13 @@ private:
 	void TakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);
 
 	UFUNCTION()
+	void OnClimbingComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
 	void OnRep_SetHealth(float OldHealth);
+
+	void GrabHold(AActor* Hold, const FVector& OverlapLocation);
 
 	void Death();
 };
