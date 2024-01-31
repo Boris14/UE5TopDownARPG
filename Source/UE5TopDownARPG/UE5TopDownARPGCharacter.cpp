@@ -76,18 +76,19 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-		/*
-		FHitResult HitResult;
-		FVector TraceStartLocation = GetActorLocation();
-		FVector TraceEndLocation = GetActorLocation() + GetActorForwardVector() * 300.0f;
-		FCollisionQueryParams Params;
-		Params.AddIgnoredActor(this);
-
-		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStartLocation, TraceEndLocation, ECollisionChannel::ECC_WorldDynamic, Params))
+	if (IsValid(GrabbedHold))
+	{
+		GetController()->SetIgnoreMoveInput(true);
+		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
+		const FVector& ActorLocation = GetActorLocation();
+		float HoldDistance = FVector::Distance(HoldLocation, ActorLocation);
+		if (HoldDistance > GrabDistanceTreshold)
 		{
-			UE_LOG(LogUE5TopDownARPG, Log, TEXT("TraceHit %s %s"), *HitResult.GetActor()->GetName(), *HitResult.GetComponent()->GetName());
+			GetCharacterMovement()->StopMovementImmediately();
+			FVector NewLocation = FMath::VInterpTo(ActorLocation, HoldLocation, DeltaSeconds, 2.5f);
+			SetActorLocation(NewLocation);
 		}
-		*/
+	}
 }
 
 void AUE5TopDownARPGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -130,7 +131,7 @@ void AUE5TopDownARPGCharacter::OnClimbingComponentBeginOverlap(UPrimitiveCompone
 		return;
 	}
 
-	if (OtherActor->ActorHasTag(ClimbingHoldsActorTag) && IsJumpProvidingForce())
+	if (OtherActor->ActorHasTag(ClimbingHoldsActorTag) && GetCharacterMovement()->IsFalling())
 	{
 		UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Grabbed"));
 		GrabHold(OtherActor, OtherActor->GetActorLocation());
@@ -153,20 +154,8 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 		return;
 	}
 
-	for (UActorComponent* Component : GetComponents())
-	{
-		UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
-		if (IsValid(PrimitiveComponent))
-		{
-			PrimitiveComponent->SetEnableGravity(false);
-		}
-	}
-	
-	const FVector& ActorLocation = GetActorLocation();
-	FVector Direction = OverlapLocation - ActorLocation;
-	float MovementScale = Direction.Size();
-	Direction.Normalize();
-	AddMovementInput(Direction);
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+	GrabbedHold = Hold;
 }
 
 void AUE5TopDownARPGCharacter::Death()

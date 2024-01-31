@@ -68,10 +68,16 @@ private:
 	/* A Tag used to check which Actors are Climbing Holds */
 	FName ClimbingHoldsActorTag;
 
-	FTimerHandle DeathHandle;
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float GrabDistanceTreshold = 80.f;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AActor> AfterDeathSpawnClass;
+
+	UPROPERTY()
+	const AActor* GrabbedHold = nullptr;
+
+	FTimerHandle DeathHandle;
 
 	UFUNCTION()
 	void TakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);
@@ -83,6 +89,7 @@ private:
 	UFUNCTION()
 	void OnRep_SetHealth(float OldHealth);
 
+	UFUNCTION()
 	void GrabHold(AActor* Hold, const FVector& OverlapLocation);
 
 	void Death();
