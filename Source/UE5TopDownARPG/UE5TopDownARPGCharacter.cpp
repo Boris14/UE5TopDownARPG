@@ -78,7 +78,6 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 
 	if (IsValid(GrabbedHold))
 	{
-		GetController()->SetIgnoreMoveInput(true);
 		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
 		const FVector& ActorLocation = GetActorLocation();
 		float HoldDistance = FVector::Distance(HoldLocation, ActorLocation);
@@ -156,6 +155,8 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GrabbedHold = Hold;
+
+	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
 void AUE5TopDownARPGCharacter::Death()

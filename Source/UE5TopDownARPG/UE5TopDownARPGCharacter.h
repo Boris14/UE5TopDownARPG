@@ -35,6 +35,8 @@ public:
 
 	FORCEINLINE class UBehaviorTree* GetBehaviorTree() const { return BehaviorTree; }
 
+	void SetOnHoldGrabbedDelegate(const TDelegate<void(AActor*)>& InOnHoldGrabbedDelegate) { OnHoldGrabbedDelegate = InOnHoldGrabbedDelegate; }
+
 	bool ActivateAbility(FVector Location);
 
 private:
@@ -76,6 +78,8 @@ private:
 
 	UPROPERTY()
 	const AActor* GrabbedHold = nullptr;
+
+	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
 
 	FTimerHandle DeathHandle;
 
