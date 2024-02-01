@@ -12,6 +12,7 @@
 class UNiagaraSystem;
 class UInputAction;
 class APawn;
+class UEnhancedInputLocalPlayerSubsystem;
 struct FInputActionInstance;
 
 UCLASS()
@@ -37,43 +38,44 @@ protected:
 	void OnClimbJumpTriggered(const FInputActionInstance& Instance);
 
 	UFUNCTION()
-	void OnClimbReleaseTriggered(const FInputActionInstance& Instance);
+	void OnLookAtTriggered(const FInputActionInstance& Instance);
 
 	UFUNCTION()
-	void OnLookAtDirectionTriggered(const FInputActionInstance& Instance);
-
-	UFUNCTION()
-	void OnLookAtDirectionCanceled(const FInputActionInstance& Instance);
+	void OnLookAtCompleted(const FInputActionInstance& Instance);
 
 private:
 	UFUNCTION()
 	void OnCharacterHoldGrabbed(AActor* Hold);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UFUNCTION()
+	void OnCharacterHoldReleased(AActor* Hold);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* ClimbMappingContext;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	UInputAction* ActivateAbilityAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	UInputAction* JumpInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
 	UInputAction* ClimbJumpInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* ClimbReleaseInputAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAtInputAction;
 
-	FVector ClimbLookDirection;
+	UPROPERTY()
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem;
+
+	// The Direction used in case of a ClimbJump { (1,0) = Right; (0,1) = Up; (-1,0) = Left }
+	FVector2D ClimbLookDirection;
 };
 
 

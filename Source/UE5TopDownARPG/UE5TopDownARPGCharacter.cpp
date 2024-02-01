@@ -159,6 +159,26 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
+void AUE5TopDownARPGCharacter::ReleaseHold()
+{
+	if (IsValid(GrabbedHold))
+	{
+		OnHoldReleasedDelegate.ExecuteIfBound(GrabbedHold);
+		GrabbedHold = nullptr;
+	}
+}
+
+void AUE5TopDownARPGCharacter::ClimbJump(FVector2D InDirection)
+{
+	if (IsValid(GrabbedHold))
+	{
+		ReleaseHold();
+		FVector JumpDirection = FVector{ 0.f, InDirection.X, InDirection.Y };
+		AddMovementInput(JumpDirection, 10.f);
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	}
+}
+
 void AUE5TopDownARPGCharacter::Death()
 {
 	UE_LOG(LogUE5TopDownARPG, Log, TEXT("Death"));

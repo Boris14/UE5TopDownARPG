@@ -28,6 +28,9 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION()
+	void ClimbJump(FVector2D InDirection);
+
 	/** Returns TopDownCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
 	/** Returns CameraBoom subobject **/
@@ -36,6 +39,7 @@ public:
 	FORCEINLINE class UBehaviorTree* GetBehaviorTree() const { return BehaviorTree; }
 
 	void SetOnHoldGrabbedDelegate(const TDelegate<void(AActor*)>& InOnHoldGrabbedDelegate) { OnHoldGrabbedDelegate = InOnHoldGrabbedDelegate; }
+	void SetOnHoldReleasedDelegate(const TDelegate<void(AActor*)>& InOnHoldReleasedDelegate) { OnHoldReleasedDelegate = InOnHoldReleasedDelegate; }
 
 	bool ActivateAbility(FVector Location);
 
@@ -77,9 +81,10 @@ private:
 	TSubclassOf<AActor> AfterDeathSpawnClass;
 
 	UPROPERTY()
-	const AActor* GrabbedHold = nullptr;
+	AActor* GrabbedHold = nullptr;
 
 	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
+	TDelegate<void(AActor*)> OnHoldReleasedDelegate;
 
 	FTimerHandle DeathHandle;
 
@@ -95,6 +100,9 @@ private:
 
 	UFUNCTION()
 	void GrabHold(AActor* Hold, const FVector& OverlapLocation);
+
+	UFUNCTION()
+	void ReleaseHold();
 
 	void Death();
 };
