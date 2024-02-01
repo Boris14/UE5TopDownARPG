@@ -77,6 +77,13 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float GrabDistanceTreshold = 80.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float ClimbJumpForce = 1000.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	/* The force at which you pull towards a Hold when you grab it */
+	float PullToHoldForce = 3.f;
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AActor> AfterDeathSpawnClass;
 

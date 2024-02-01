@@ -128,11 +128,12 @@ void AUE5TopDownARPGPlayerController::OnLookAtTriggered(const FInputActionInstan
 {
 	const FVector& Value = Instance.GetValue().Get<FVector>();
 	ClimbLookDirection = FVector2D{ Value.Y - Value.X, Value.Z };
+	ClimbLookDirection.Normalize();
 }
 
 void AUE5TopDownARPGPlayerController::OnLookAtCompleted(const FInputActionInstance& Instance)
 {
- 	ClimbLookDirection = FVector2D::ZeroVector;
+	ClimbLookDirection = FVector2D::ZeroVector;
 }
 
 void AUE5TopDownARPGPlayerController::OnCharacterHoldGrabbed(AActor* Hold)
@@ -165,4 +166,6 @@ void AUE5TopDownARPGPlayerController::OnCharacterHoldReleased(AActor* Hold)
 	}
 	InputSubsystem->RemoveMappingContext(ClimbMappingContext);
 	InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
+
+	ClimbLookDirection = FVector2D::ZeroVector;
 }

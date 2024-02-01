@@ -15,6 +15,7 @@
 #include "UE5TopDownARPGGameMode.h"
 #include "UE5TopDownARPG.h"
 #include "GameFramework/PhysicsVolume.h"
+#include "DrawDebugHelpers.h"
 #include "Net/UnrealNetwork.h"
 
 AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
@@ -84,7 +85,7 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 		if (HoldDistance > GrabDistanceTreshold)
 		{
 			GetCharacterMovement()->StopMovementImmediately();
-			FVector NewLocation = FMath::VInterpTo(ActorLocation, HoldLocation, DeltaSeconds, 2.5f);
+			FVector NewLocation = FMath::VInterpTo(ActorLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
 			SetActorLocation(NewLocation);
 		}
 	}
@@ -165,6 +166,7 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 	{
 		OnHoldReleasedDelegate.ExecuteIfBound(GrabbedHold);
 		GrabbedHold = nullptr;
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	}
 }
 
@@ -174,8 +176,7 @@ void AUE5TopDownARPGCharacter::ClimbJump(FVector2D InDirection)
 	{
 		ReleaseHold();
 		FVector JumpDirection = FVector{ 0.f, InDirection.X, InDirection.Y };
-		AddMovementInput(JumpDirection, 10.f);
-		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		GetCharacterMovement()->AddImpulse(JumpDirection * GetCharacterMovement()->Mass * ClimbJumpForce);
 	}
 }
 
