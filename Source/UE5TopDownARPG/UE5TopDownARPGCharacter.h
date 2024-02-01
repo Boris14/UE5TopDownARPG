@@ -84,11 +84,16 @@ private:
 	/* The force at which you pull towards a Hold when you grab it */
 	float PullToHoldForce = 3.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float CameraClimbPitch = -30.f;
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AActor> AfterDeathSpawnClass;
 
 	UPROPERTY()
 	AActor* GrabbedHold = nullptr;
+
+	float OriginalCameraPitch;
 
 	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
 	TDelegate<void(AActor*)> OnHoldReleasedDelegate;

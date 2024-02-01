@@ -61,6 +61,8 @@ void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	OriginalCameraPitch = CameraBoom->GetComponentRotation().Pitch;
+
 	OnTakeAnyDamage.AddDynamic(this, &AUE5TopDownARPGCharacter::TakeAnyDamage);
 
 	FScriptDelegate OnClimbingComponentBeginOverlapDelegate;
@@ -77,6 +79,7 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+	FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
 	if (IsValid(GrabbedHold))
 	{
 		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
@@ -88,7 +91,19 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 			FVector NewLocation = FMath::VInterpTo(ActorLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
 			SetActorLocation(NewLocation);
 		}
+
+		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, CameraClimbPitch) == false)
+		{
+			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, CameraClimbPitch, DeltaSeconds, 0.3f);
+			CameraBoom->SetWorldRotation(CameraBoomRotation);
+		}
 	}
+	else if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, OriginalCameraPitch) == false)
+	{
+		CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, OriginalCameraPitch, DeltaSeconds, 0.3f);
+		CameraBoom->SetWorldRotation(CameraBoomRotation);
+	}
+	
 }
 
 void AUE5TopDownARPGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -157,6 +172,10 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GrabbedHold = Hold;
 
+	FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
+	CameraBoomRotation.Pitch = CameraClimbPitch;
+	CameraBoom->SetWorldRotation(CameraBoomRotation);
+
 	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
@@ -167,6 +186,11 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 		OnHoldReleasedDelegate.ExecuteIfBound(GrabbedHold);
 		GrabbedHold = nullptr;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		
+
+		FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
+		CameraBoomRotation.Pitch = OriginalCameraPitch;
+		CameraBoom->SetWorldRotation(CameraBoomRotation);
 	}
 }
 
