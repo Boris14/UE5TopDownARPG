@@ -16,6 +16,7 @@
 #include "UE5TopDownARPG.h"
 #include "GameFramework/PhysicsVolume.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Net/UnrealNetwork.h"
 
 AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
@@ -43,8 +44,8 @@ AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
-	CameraBoom->TargetArmLength = 800.f;
-	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
+	CameraBoom->TargetArmLength = OriginalCameraDistance;
+	CameraBoom->SetRelativeRotation(FRotator(OriginalCameraPitch, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
 	// Create a camera...
@@ -60,15 +61,13 @@ AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
 void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	OriginalCameraPitch = CameraBoom->GetComponentRotation().Pitch;
 
 	OnTakeAnyDamage.AddDynamic(this, &AUE5TopDownARPGCharacter::TakeAnyDamage);
 
 	FScriptDelegate OnClimbingComponentBeginOverlapDelegate;
 	OnClimbingComponentBeginOverlapDelegate.BindUFunction(this, "OnClimbingComponentBeginOverlap");
 	ClimbingSphereComponent->OnComponentBeginOverlap.AddUnique(OnClimbingComponentBeginOverlapDelegate);
-
+	
 	if (AbilityTemplate != nullptr)
 	{
 		AbilityInstance = NewObject<UBaseAbility>(this, AbilityTemplate);
@@ -79,31 +78,50 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (IsValid(CharacterMesh) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::Tick IsValid(Mesh) == false"));
+		return;
+	}
+
+	FVector GrabSocketLocation = CharacterMesh->GetSocketLocation(GrabSocketName);
 	FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
+	float CameraDistance = CameraBoom->TargetArmLength;
 	if (IsValid(GrabbedHold))
 	{
 		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
-		const FVector& ActorLocation = GetActorLocation();
-		float HoldDistance = FVector::Distance(HoldLocation, ActorLocation);
+		float HoldDistance = FVector::Distance(GrabSocketLocation, HoldLocation);
 		if (HoldDistance > GrabDistanceTreshold)
 		{
 			GetCharacterMovement()->StopMovementImmediately();
-			FVector NewLocation = FMath::VInterpTo(ActorLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
-			SetActorLocation(NewLocation);
+			FVector NewLocation = FMath::VInterpTo(GrabSocketLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
+			FVector LocationOffset = NewLocation - GrabSocketLocation;
+			SetActorLocation(GetActorLocation() + LocationOffset);
 		}
 
-		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, CameraClimbPitch) == false)
+		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, ClimbCameraPitch) == false)
 		{
-			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, CameraClimbPitch, DeltaSeconds, 0.3f);
+			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, ClimbCameraPitch, DeltaSeconds, PullToHoldForce);
 			CameraBoom->SetWorldRotation(CameraBoomRotation);
 		}
+		if (FMath::IsNearlyEqual(CameraDistance, ClimbCameraDistance) == false)
+		{
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraDistance, ClimbCameraDistance, DeltaSeconds, PullToHoldForce);
+		}
 	}
-	else if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, OriginalCameraPitch) == false)
+	else
 	{
-		CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, OriginalCameraPitch, DeltaSeconds, 0.3f);
-		CameraBoom->SetWorldRotation(CameraBoomRotation);
+		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, OriginalCameraPitch) == false)
+		{
+			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, OriginalCameraPitch, DeltaSeconds, PullToHoldForce);
+			CameraBoom->SetWorldRotation(CameraBoomRotation);
+		}
+		if (FMath::IsNearlyEqual(CameraDistance, OriginalCameraDistance) == false)
+		{
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraDistance, OriginalCameraDistance, DeltaSeconds, PullToHoldForce);
+		}
 	}
-	
 }
 
 void AUE5TopDownARPGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -172,10 +190,6 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GrabbedHold = Hold;
 
-	FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
-	CameraBoomRotation.Pitch = CameraClimbPitch;
-	CameraBoom->SetWorldRotation(CameraBoomRotation);
-
 	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
@@ -186,11 +200,6 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 		OnHoldReleasedDelegate.ExecuteIfBound(GrabbedHold);
 		GrabbedHold = nullptr;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
-		
-
-		FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
-		CameraBoomRotation.Pitch = OriginalCameraPitch;
-		CameraBoom->SetWorldRotation(CameraBoomRotation);
 	}
 }
 

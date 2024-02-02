@@ -71,29 +71,33 @@ private:
 	float DeathDelay = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	/* The force at which you pull towards a Hold when you grab it */
+	FName GrabSocketName = "Grab Socket";
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	/* A Tag used to check which Actors are Climbing Holds */
 	FName ClimbingHoldsActorTag;
-
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float GrabDistanceTreshold = 80.f;
-
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpForce = 1000.f;
-
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	/* The force at which you pull towards a Hold when you grab it */
 	float PullToHoldForce = 3.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	float CameraClimbPitch = -30.f;
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float OriginalCameraPitch = -50.f;
+	UPROPERTY(EditDefaultsOnly, Category = Camera)
+	float OriginalCameraDistance = 1400.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Climbing")
+	float ClimbCameraPitch = -20.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Climbing")
+	float ClimbCameraDistance = 2100.f;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AActor> AfterDeathSpawnClass;
 
 	UPROPERTY()
 	AActor* GrabbedHold = nullptr;
-
-	float OriginalCameraPitch;
 
 	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
 	TDelegate<void(AActor*)> OnHoldReleasedDelegate;
