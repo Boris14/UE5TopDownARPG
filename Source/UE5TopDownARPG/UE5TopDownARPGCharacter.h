@@ -6,7 +6,8 @@
 #include "GameFramework/Character.h"
 #include "UE5TopDownARPGCharacter.generated.h"
 
-class USphereComponent;
+class UBoxComponent;
+class UArrowComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UBehaviorTree;
@@ -29,7 +30,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
-	void ClimbJump(FVector2D InDirection);
+	void SetIsJumpArrowVisible(bool IsVisible);
+
+	UFUNCTION()
+	void UpdateJumpArrow(const FVector2D& Direction, float MaxLengthFraction);
+
+	UFUNCTION()
+	void ClimbJump(FVector2D InDirection, float MaxForceFraction);
 
 	/** Returns TopDownCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
@@ -48,8 +55,13 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* TopDownCameraComponent;
 
+	/* The Area where the Character can grab Holds */
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	USphereComponent* ClimbingSphereComponent;
+	UBoxComponent* ClimbingBoxComponent;
+
+	/* Arrow Component showing the direction and charge when doing a ClimbJump */
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	UArrowComponent* ClimbJumpArrowComponent;
 
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -71,17 +83,21 @@ private:
 	float DeathDelay = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	/* The force at which you pull towards a Hold when you grab it */
 	FName GrabSocketName = "Grab Socket";
-	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	/* A Tag used to check which Actors are Climbing Holds */
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	FName ClimbingHoldsActorTag;
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float ClimbJumpArrowMaxLength = 200.f;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float GrabDistanceTreshold = 80.f;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	float ClimbJumpForce = 1000.f;
+	float ClimbJumpMaxForce = 1100.f;
+	/* Determines how up the side jump is */
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float ClimbJumpShrinkSideRangeMultiplier = 0.8f;
 	/* The force at which you pull towards a Hold when you grab it */
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float PullToHoldForce = 3.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = Camera)
@@ -102,6 +118,7 @@ private:
 	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
 	TDelegate<void(AActor*)> OnHoldReleasedDelegate;
 
+	FRotator DesiredRotation;
 	FTimerHandle DeathHandle;
 
 	UFUNCTION()
@@ -119,6 +136,9 @@ private:
 
 	UFUNCTION()
 	void ReleaseHold();
+
+	UFUNCTION()
+	FRotator GetFaceWallRotation() const;
 
 	void Death();
 };

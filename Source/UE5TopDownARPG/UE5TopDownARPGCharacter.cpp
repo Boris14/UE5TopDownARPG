@@ -8,7 +8,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Materials/Material.h"
 #include "Engine/World.h"
 #include "Abilities/BaseAbility.h"
@@ -35,10 +36,14 @@ AUE5TopDownARPGCharacter::AUE5TopDownARPGCharacter()
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
-	ClimbingSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ClimbingSphereComponent"));
-	ClimbingSphereComponent->SetupAttachment(RootComponent);
-	ClimbingSphereComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Overlap);
-	ClimbingSphereComponent->SetGenerateOverlapEvents(true);
+	ClimbingBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("ClimbingBoxComponent"));
+	ClimbingBoxComponent->SetupAttachment(RootComponent);
+	ClimbingBoxComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Overlap);
+	ClimbingBoxComponent->SetGenerateOverlapEvents(true);
+
+	ClimbJumpArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("ClimbJumpArrowComponent"));
+	ClimbJumpArrowComponent->SetupAttachment(RootComponent);
+	ClimbJumpArrowComponent->ArrowLength = ClimbJumpArrowMaxLength;
 
 	// Create a camera boom...
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -62,11 +67,22 @@ void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (IsValid(CharacterMesh) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::BeginPlay IsValid(Mesh) == false"));
+		return;
+	}
+	FVector GrabSocketLocation = CharacterMesh->GetSocketLocation(GrabSocketName);
+	FVector GrabRelativeLocation = GrabSocketLocation - GetActorLocation();
+	ClimbJumpArrowComponent->SetRelativeLocation(GrabRelativeLocation);
+	ClimbJumpArrowComponent->SetVisibility(false);
+
 	OnTakeAnyDamage.AddDynamic(this, &AUE5TopDownARPGCharacter::TakeAnyDamage);
 
 	FScriptDelegate OnClimbingComponentBeginOverlapDelegate;
 	OnClimbingComponentBeginOverlapDelegate.BindUFunction(this, "OnClimbingComponentBeginOverlap");
-	ClimbingSphereComponent->OnComponentBeginOverlap.AddUnique(OnClimbingComponentBeginOverlapDelegate);
+	ClimbingBoxComponent->OnComponentBeginOverlap.AddUnique(OnClimbingComponentBeginOverlapDelegate);
 	
 	if (AbilityTemplate != nullptr)
 	{
@@ -100,6 +116,12 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 			SetActorLocation(GetActorLocation() + LocationOffset);
 		}
 
+		if (GetActorRotation().Equals(DesiredRotation) == false)
+		{
+			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), DesiredRotation, DeltaSeconds, PullToHoldForce);
+			SetActorRotation(NewRotation);
+		}
+
 		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, ClimbCameraPitch) == false)
 		{
 			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, ClimbCameraPitch, DeltaSeconds, PullToHoldForce);
@@ -129,6 +151,30 @@ void AUE5TopDownARPGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AUE5TopDownARPGCharacter, Health);
+}
+
+void AUE5TopDownARPGCharacter::SetIsJumpArrowVisible(bool IsVisible)
+{
+	if (IsValid(ClimbJumpArrowComponent) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::SetIsJumpArrowVisible IsValid(ClimbJumpArrowComponent) == false"));
+		return;
+	}
+
+	ClimbJumpArrowComponent->SetVisibility(IsVisible);
+}
+
+void AUE5TopDownARPGCharacter::UpdateJumpArrow(const FVector2D& Direction, float MaxLengthFraction)
+{
+	if (IsValid(ClimbJumpArrowComponent) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::UpdateJumpArrowProperties IsValid(ClimbJumpArrowComponent) == false"));
+		return;
+	}
+
+	ClimbJumpArrowComponent->SetWorldScale3D(FVector(MaxLengthFraction,1.f,1.f));
+	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("ArrowSize: %.2f"), ClimbJumpArrowComponent->ArrowLength);
+	ClimbJumpArrowComponent->SetRelativeRotation(FVector(0.f, Direction.X, Direction.Y).ToOrientationRotator());
 }
 
 bool AUE5TopDownARPGCharacter::ActivateAbility(FVector Location)
@@ -190,6 +236,8 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GrabbedHold = Hold;
 
+	DesiredRotation = GetFaceWallRotation();
+
 	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
@@ -203,13 +251,33 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 	}
 }
 
-void AUE5TopDownARPGCharacter::ClimbJump(FVector2D InDirection)
+FRotator AUE5TopDownARPGCharacter::GetFaceWallRotation() const
+{
+	UWorld* World = GetWorld();
+	if(IsValid(World) == false)
+	{
+		UE_LOG(LogUE5TopDownARPG, Error, TEXT("AUE5TopDownARPGCharacter::GetNormalVectorFromWall IsValid(World) == false"));
+		return FRotator::ZeroRotator;
+	}
+	const FVector Start = GetActorLocation();
+	const FVector End = Start + GetActorForwardVector() * ClimbingBoxComponent->GetScaledBoxExtent().Y * 1.5;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+	FHitResult Hit;
+	World->LineTraceSingleByChannel(Hit, Start, End, ECollisionChannel::ECC_WorldStatic, QueryParams);
+
+	const FVector Direction = -Hit.ImpactNormal;
+	return Direction.ToOrientationRotator();
+}
+
+void AUE5TopDownARPGCharacter::ClimbJump(FVector2D InDirection, float MaxForceFraction)
 {
 	if (IsValid(GrabbedHold))
 	{
 		ReleaseHold();
+		InDirection.Y += FMath::Abs(InDirection.X) * ClimbJumpShrinkSideRangeMultiplier;
 		FVector JumpDirection = FVector{ 0.f, InDirection.X, InDirection.Y };
-		GetCharacterMovement()->AddImpulse(JumpDirection * GetCharacterMovement()->Mass * ClimbJumpForce);
+		GetCharacterMovement()->AddImpulse(JumpDirection * GetCharacterMovement()->Mass * ClimbJumpMaxForce * MaxForceFraction);
 	}
 }
 

@@ -25,6 +25,7 @@ protected:
 	// To add mapping context
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	void OnActivateAbilityStarted();
 
@@ -35,7 +36,10 @@ protected:
 	void OnJumpInputTriggered(const FInputActionInstance& Instance);
 
 	UFUNCTION()
-	void OnClimbJumpTriggered(const FInputActionInstance& Instance);
+	void OnClimbJumpPressed(const FInputActionInstance& Instance);
+
+	UFUNCTION()
+	void OnClimbJumpReleased(const FInputActionInstance& Instance);
 
 	UFUNCTION()
 	void OnLookAtTriggered(const FInputActionInstance& Instance);
@@ -74,8 +78,12 @@ private:
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem;
 
-	// The Direction used in case of a ClimbJump { (1,0) = Right; (0,1) = Up; (-1,0) = Left }
-	FVector2D ClimbLookDirection;
+	UPROPERTY(EditDefaultsOnly)
+	float ClimbJumpMinForceFraction = 0.2f;
+	/* The Direction used when doing a ClimbJump {(1,0) = Right; (0,1) = Up; (-1,0) = Left} */
+	FVector2D ClimbJumpDirection;
+	float ClimbJumpForceFraction = 0.2f;
+	bool IsChargingJump = false;
 };
 
 
