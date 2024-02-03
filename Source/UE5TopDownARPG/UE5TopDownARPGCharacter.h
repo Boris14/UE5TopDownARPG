@@ -83,7 +83,11 @@ private:
 	float DeathDelay = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	FName GrabSocketName = "Grab Socket";
+	FName GrabSocketName = "Grab";
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	FName LeftHandSocketName = "Left Hand";
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	FName RightHandSocketName = "Right Hand";
 	/* A Tag used to check which Actors are Climbing Holds */
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	FName ClimbingHoldsActorTag;
@@ -118,6 +122,10 @@ private:
 	TDelegate<void(AActor*)> OnHoldGrabbedDelegate;
 	TDelegate<void(AActor*)> OnHoldReleasedDelegate;
 
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FVector IKOffsetRightHand;
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FVector IKOffsetLeftHand;
 	FRotator DesiredRotation;
 	FTimerHandle DeathHandle;
 

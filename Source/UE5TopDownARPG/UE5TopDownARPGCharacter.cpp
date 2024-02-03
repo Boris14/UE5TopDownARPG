@@ -67,6 +67,9 @@ void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	IKOffsetRightHand = FVector::ZeroVector;
+	IKOffsetLeftHand = FVector::ZeroVector;
+
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	if (IsValid(CharacterMesh) == false)
 	{
@@ -107,6 +110,13 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 	if (IsValid(GrabbedHold))
 	{
 		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
+	
+		FVector RightHandLocation = CharacterMesh->GetSocketLocation(RightHandSocketName);
+		FVector LeftHandLocation = CharacterMesh->GetSocketLocation(LeftHandSocketName);
+
+		IKOffsetRightHand = FMath::VInterpTo(IKOffsetRightHand, HoldLocation - RightHandLocation, DeltaSeconds, PullToHoldForce);
+		IKOffsetLeftHand = FMath::VInterpTo(IKOffsetLeftHand, HoldLocation - LeftHandLocation, DeltaSeconds, PullToHoldForce);
+
 		float HoldDistance = FVector::Distance(GrabSocketLocation, HoldLocation);
 		if (HoldDistance > GrabDistanceTreshold)
 		{
@@ -249,6 +259,9 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 		GrabbedHold = nullptr;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	}
+
+	IKOffsetRightHand = FVector::ZeroVector;
+	IKOffsetLeftHand = FVector::ZeroVector;
 }
 
 FRotator AUE5TopDownARPGCharacter::GetFaceWallRotation() const
