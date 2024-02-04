@@ -97,6 +97,12 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Right Hand: %s"), *IKOffsetRightHand.ToString());
+	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Left Hand: %s"), *IKOffsetLeftHand.ToString());
+
+	/** Use this to get the controller for the given IKRig */
+	//static UIKRigController* GetIKRigController(UIKRigDefinition * InIKRigDefinition);
+
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	if (IsValid(CharacterMesh) == false)
 	{
@@ -114,8 +120,10 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 		FVector RightHandLocation = CharacterMesh->GetSocketLocation(RightHandSocketName);
 		FVector LeftHandLocation = CharacterMesh->GetSocketLocation(LeftHandSocketName);
 
-		IKOffsetRightHand = FMath::VInterpTo(IKOffsetRightHand, HoldLocation - RightHandLocation, DeltaSeconds, PullToHoldForce);
-		IKOffsetLeftHand = FMath::VInterpTo(IKOffsetLeftHand, HoldLocation - LeftHandLocation, DeltaSeconds, PullToHoldForce);
+		IKOffsetRightHand = HoldLocation - RightHandLocation;
+		IKOffsetLeftHand = HoldLocation - LeftHandLocation;
+		//IKOffsetRightHand = FMath::VInterpTo(IKOffsetRightHand, HoldLocation - RightHandLocation, DeltaSeconds, PullToHoldForce);
+		//IKOffsetLeftHand = FMath::VInterpTo(IKOffsetLeftHand, HoldLocation - LeftHandLocation, DeltaSeconds, PullToHoldForce);
 
 		float HoldDistance = FVector::Distance(GrabSocketLocation, HoldLocation);
 		if (HoldDistance > GrabDistanceTreshold)
@@ -183,7 +191,6 @@ void AUE5TopDownARPGCharacter::UpdateJumpArrow(const FVector2D& Direction, float
 	}
 
 	ClimbJumpArrowComponent->SetWorldScale3D(FVector(MaxLengthFraction,1.f,1.f));
-	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("ArrowSize: %.2f"), ClimbJumpArrowComponent->ArrowLength);
 	ClimbJumpArrowComponent->SetRelativeRotation(FVector(0.f, Direction.X, Direction.Y).ToOrientationRotator());
 }
 
@@ -288,7 +295,6 @@ void AUE5TopDownARPGCharacter::ClimbJump(FVector2D InDirection, float MaxForceFr
 	if (IsValid(GrabbedHold))
 	{
 		ReleaseHold();
-		InDirection.Y += FMath::Abs(InDirection.X) * ClimbJumpShrinkSideRangeMultiplier;
 		FVector JumpDirection = FVector{ 0.f, InDirection.X, InDirection.Y };
 		GetCharacterMovement()->AddImpulse(JumpDirection * GetCharacterMovement()->Mass * ClimbJumpMaxForce * MaxForceFraction);
 	}

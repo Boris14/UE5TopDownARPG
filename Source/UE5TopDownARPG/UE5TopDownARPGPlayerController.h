@@ -57,7 +57,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climbing", meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* ClimbMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
@@ -69,16 +69,19 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	UInputAction* JumpInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climbing", meta = (AllowPrivateAccess = "true"))
 	UInputAction* ClimbJumpInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climb", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input|Climbing", meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAtInputAction;
 
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem;
 
-	UPROPERTY(EditDefaultsOnly)
+	/* Determines how up the side jump is */
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	float ClimbJumpShrinkSideRangeMultiplier = 0.8f;
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpMinForceFraction = 0.2f;
 	/* The Direction used when doing a ClimbJump {(1,0) = Right; (0,1) = Up; (-1,0) = Left} */
 	FVector2D ClimbJumpDirection;

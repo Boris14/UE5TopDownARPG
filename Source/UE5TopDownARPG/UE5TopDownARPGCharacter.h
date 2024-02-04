@@ -97,9 +97,6 @@ private:
 	float GrabDistanceTreshold = 80.f;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpMaxForce = 1100.f;
-	/* Determines how up the side jump is */
-	UPROPERTY(EditDefaultsOnly, Category = Climbing)
-	float ClimbJumpShrinkSideRangeMultiplier = 0.8f;
 	/* The force at which you pull towards a Hold when you grab it */
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float PullToHoldForce = 3.f;

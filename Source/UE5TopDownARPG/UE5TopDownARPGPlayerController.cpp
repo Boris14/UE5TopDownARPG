@@ -163,6 +163,7 @@ void AUE5TopDownARPGPlayerController::OnLookAtTriggered(const FInputActionInstan
 {
 	const FVector& Value = Instance.GetValue().Get<FVector>();
 	ClimbJumpDirection = FVector2D{ Value.Y - Value.X, Value.Z };
+	ClimbJumpDirection.Y += FMath::Abs(ClimbJumpDirection.X) * ClimbJumpShrinkSideRangeMultiplier;
 	ClimbJumpDirection.Normalize();
 }
 
