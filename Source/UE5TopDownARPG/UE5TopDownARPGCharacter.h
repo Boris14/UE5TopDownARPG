@@ -30,6 +30,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
+	bool GetShouldDisplayClimbJumpArrow() const { return ShouldDisplayClimbJumpArrow; }
+
+	UFUNCTION()
 	void SetIsJumpArrowVisible(bool IsVisible);
 
 	UFUNCTION()
@@ -92,6 +95,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	FName ClimbingHoldsActorTag;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
+	bool ShouldDisplayClimbJumpArrow = false;
+	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpArrowMaxLength = 200.f;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float GrabDistanceTreshold = 80.f;
@@ -120,11 +125,14 @@ private:
 	TDelegate<void(AActor*)> OnHoldReleasedDelegate;
 
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	FVector IKOffsetRightHand;
+	FVector IKRightHandWorldLocation;
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	FVector IKOffsetLeftHand;
-	FRotator DesiredRotation;
+	FVector IKLeftHandWorldLocation;
+
 	FTimerHandle DeathHandle;
+
+	UFUNCTION(BlueprintCallable)
+	bool HasGrabbedHold() const { return IsValid(GrabbedHold); }
 
 	UFUNCTION()
 	void TakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);

@@ -67,9 +67,6 @@ void AUE5TopDownARPGCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	IKOffsetRightHand = FVector::ZeroVector;
-	IKOffsetLeftHand = FVector::ZeroVector;
-
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	if (IsValid(CharacterMesh) == false)
 	{
@@ -97,12 +94,6 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Right Hand: %s"), *IKOffsetRightHand.ToString());
-	UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Left Hand: %s"), *IKOffsetLeftHand.ToString());
-
-	/** Use this to get the controller for the given IKRig */
-	//static UIKRigController* GetIKRigController(UIKRigDefinition * InIKRigDefinition);
-
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	if (IsValid(CharacterMesh) == false)
 	{
@@ -110,36 +101,37 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	FVector GrabSocketLocation = CharacterMesh->GetSocketLocation(GrabSocketName);
+	const FVector& GrabSocketLocation = CharacterMesh->GetSocketLocation(GrabSocketName);
 	FRotator CameraBoomRotation = CameraBoom->GetComponentRotation();
 	float CameraDistance = CameraBoom->TargetArmLength;
 	if (IsValid(GrabbedHold))
 	{
 		const FVector& HoldLocation = GrabbedHold->GetActorLocation();
-	
-		FVector RightHandLocation = CharacterMesh->GetSocketLocation(RightHandSocketName);
-		FVector LeftHandLocation = CharacterMesh->GetSocketLocation(LeftHandSocketName);
+		const FVector& ForwardVector = GetActorForwardVector();
 
-		IKOffsetRightHand = HoldLocation - RightHandLocation;
-		IKOffsetLeftHand = HoldLocation - LeftHandLocation;
-		//IKOffsetRightHand = FMath::VInterpTo(IKOffsetRightHand, HoldLocation - RightHandLocation, DeltaSeconds, PullToHoldForce);
-		//IKOffsetLeftHand = FMath::VInterpTo(IKOffsetLeftHand, HoldLocation - LeftHandLocation, DeltaSeconds, PullToHoldForce);
+		// Set the Location of the Hands for the IK Goals
+		IKRightHandWorldLocation = HoldLocation + FRotator(0.f, 90.f, 0.f).RotateVector(ForwardVector) * 20;
+		IKLeftHandWorldLocation = HoldLocation + FRotator(0.f, -90.f, 0.f).RotateVector(ForwardVector) * 20;
 
+		// Move the Character to simulate that he's pulling himself to the Grabbed Hold
 		float HoldDistance = FVector::Distance(GrabSocketLocation, HoldLocation);
 		if (HoldDistance > GrabDistanceTreshold)
 		{
 			GetCharacterMovement()->StopMovementImmediately();
-			FVector NewLocation = FMath::VInterpTo(GrabSocketLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
-			FVector LocationOffset = NewLocation - GrabSocketLocation;
+			const FVector& NewGrabSocketLocation = FMath::VInterpTo(GrabSocketLocation, HoldLocation, DeltaSeconds, PullToHoldForce);
+			const FVector& LocationOffset = NewGrabSocketLocation - GrabSocketLocation;
 			SetActorLocation(GetActorLocation() + LocationOffset);
 		}
 
-		if (GetActorRotation().Equals(DesiredRotation) == false)
+		// Adjust the Rotation of the Character to he faces the Wall
+		const FRotator& FaceWallRotation = GetFaceWallRotation();
+		if (GetActorRotation().Equals(FaceWallRotation) == false)
 		{
-			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), DesiredRotation, DeltaSeconds, PullToHoldForce);
+			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), FaceWallRotation, DeltaSeconds, PullToHoldForce);
 			SetActorRotation(NewRotation);
 		}
 
+		// Adjust the Camera for Climbing
 		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, ClimbCameraPitch) == false)
 		{
 			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, ClimbCameraPitch, DeltaSeconds, PullToHoldForce);
@@ -152,6 +144,7 @@ void AUE5TopDownARPGCharacter::Tick(float DeltaSeconds)
 	}
 	else
 	{
+		// Adjust the Camera for Walking
 		if (FMath::IsNearlyEqual(CameraBoomRotation.Pitch, OriginalCameraPitch) == false)
 		{
 			CameraBoomRotation.Pitch = FMath::FInterpTo(CameraBoomRotation.Pitch, OriginalCameraPitch, DeltaSeconds, PullToHoldForce);
@@ -229,7 +222,6 @@ void AUE5TopDownARPGCharacter::OnClimbingComponentBeginOverlap(UPrimitiveCompone
 
 	if (OtherActor->ActorHasTag(ClimbingHoldsActorTag) && GetCharacterMovement()->IsFalling())
 	{
-		UE_LOG(LogUE5TopDownARPG, Warning, TEXT("Grabbed"));
 		GrabHold(OtherActor, OtherActor->GetActorLocation());
 	}
 }
@@ -253,8 +245,6 @@ void AUE5TopDownARPGCharacter::GrabHold(AActor* Hold, const FVector& OverlapLoca
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 	GrabbedHold = Hold;
 
-	DesiredRotation = GetFaceWallRotation();
-
 	OnHoldGrabbedDelegate.ExecuteIfBound(Hold);
 }
 
@@ -266,9 +256,6 @@ void AUE5TopDownARPGCharacter::ReleaseHold()
 		GrabbedHold = nullptr;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	}
-
-	IKOffsetRightHand = FVector::ZeroVector;
-	IKOffsetLeftHand = FVector::ZeroVector;
 }
 
 FRotator AUE5TopDownARPGCharacter::GetFaceWallRotation() const

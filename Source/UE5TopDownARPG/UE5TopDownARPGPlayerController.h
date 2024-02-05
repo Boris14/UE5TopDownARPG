@@ -78,12 +78,12 @@ private:
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem;
 
-	/* Determines how up the side jump is */
+	/* Determines how much the side jump is actually to the side */
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpShrinkSideRangeMultiplier = 0.8f;
 	UPROPERTY(EditDefaultsOnly, Category = Climbing)
 	float ClimbJumpMinForceFraction = 0.2f;
-	/* The Direction used when doing a ClimbJump {(1,0) = Right; (0,1) = Up; (-1,0) = Left} */
+	/* The Direction used when doing a ClimbJump. (1,0) = Right; (0,1) = Up; (-1,0) = Left */
 	FVector2D ClimbJumpDirection;
 	float ClimbJumpForceFraction = 0.2f;
 	bool IsChargingJump = false;

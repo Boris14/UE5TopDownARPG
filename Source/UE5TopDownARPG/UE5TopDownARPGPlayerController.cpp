@@ -56,7 +56,7 @@ void AUE5TopDownARPGPlayerController::Tick(float DeltaSeconds)
 		ClimbJumpForceFraction = FMath::Clamp(ClimbJumpForceFraction, ClimbJumpMinForceFraction, 1.f);
 
 		AUE5TopDownARPGCharacter* UECharacter = Cast<AUE5TopDownARPGCharacter>(GetPawn());
-		if (IsValid(UECharacter))
+		if (IsValid(UECharacter) && UECharacter->GetShouldDisplayClimbJumpArrow())
 		{
 			UECharacter->UpdateJumpArrow(ClimbJumpDirection, ClimbJumpForceFraction);
 		}
@@ -140,7 +140,10 @@ void AUE5TopDownARPGPlayerController::OnClimbJumpPressed(const FInputActionInsta
 	}
 
 	IsChargingJump = true;
-	UECharacter->SetIsJumpArrowVisible(true);
+	if (UECharacter->GetShouldDisplayClimbJumpArrow())
+	{
+		UECharacter->SetIsJumpArrowVisible(true);
+	}
 }
 
 void AUE5TopDownARPGPlayerController::OnClimbJumpReleased(const FInputActionInstance& Instance)
